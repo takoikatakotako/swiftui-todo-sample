@@ -1,14 +1,16 @@
 import SwiftUI
+import CoreData
 
 struct ContentView: View, InputViewDelegate {
-    @State var todos: [String] = []
+    @State var todos: [Todo] = []
+    let coredataHandler = CoredataHandler()
     
     var body: some View {
         NavigationView {
             ZStack(alignment: .bottomTrailing) {
                 List {
-                    ForEach(todos, id: \.self) { user in
-                        Text(user)
+                    ForEach(todos) { todo in
+                        Text(todo.text)
                     }
                     .onDelete(perform: delete)
                 }
@@ -25,7 +27,7 @@ struct ContentView: View, InputViewDelegate {
                 
             }
             .onAppear {
-                if let todos = UserDefaults.standard.array(forKey: "TODO") as? [String] {
+                if let todos = try? coredataHandler.fetchTodoManagedObject().map({Todo(id: $0.id, text: $0.text)})  {
                     self.todos = todos
                 }
             }
@@ -35,14 +37,17 @@ struct ContentView: View, InputViewDelegate {
     }
     
     func delete(at offsets: IndexSet) {
+        let deleteTodos = offsets.map{ todos[$0] }
+        for deleteTodo in deleteTodos {
+            try? coredataHandler.deleteNoteManagedObject(note: deleteTodo)
+        }
         todos.remove(atOffsets: offsets)
-        print(todos)
-        UserDefaults.standard.setValue(todos, forKey: "TODO")
     }
     
     func addTodo(text: String) {
-        todos.append(text)
-        UserDefaults.standard.setValue(todos, forKey: "TODO")
+        let todo = Todo(id: UUID(), text: text)
+        try? coredataHandler.newTodoManagedObject(todo: todo)
+        todos.append(todo)
     }
 }
 
